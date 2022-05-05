@@ -1,0 +1,4 @@
+include README.md
+recursive-include octoprint_Start_Print_From_Printer/templates *
+recursive-include octoprint_Start_Print_From_Printer/translations *
+recursive-include octoprint_Start_Print_From_Printer/static *

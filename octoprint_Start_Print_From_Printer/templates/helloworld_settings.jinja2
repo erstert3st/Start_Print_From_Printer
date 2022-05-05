@@ -1,0 +1,46 @@
+<form class="form-horizontal">
+    <div class="control-group">
+        <label class="control-label">{{ _('Folder:') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.helloworld.folder">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+            <input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.helloworld.autoStart">
+            Refresh at startup
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.helloworld.commandsClient">
+            {{ _('Commands on printer ') }}
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.helloworld.hideFolder">
+            Execlude commands folder on octoprint
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Refresh:') }}</label>
+        <div class="controls">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.helloworld.refreshHost">
+            Server Files
+            <input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.helloworld.refreshSD">
+            SD Files
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.helloworld.refreshDeleteOld">
+            Delete Old Files
+            <input type="button" id="findMe" class="button" data-bind="click: forceRefresh" value="Refresh">
+
+        </div>
+    </div>
+</form>

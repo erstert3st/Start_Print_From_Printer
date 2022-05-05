@@ -1,0 +1,55 @@
+#tab_plugin_helloworld iframe {
+    width: 100%;
+    height: 600px;
+    border: 1px solid #a80000;
+}
+
+
+.button_h_w.active,
+.button_h_w.disabled,
+#settings_plugin_helloworld .button:active,
+#settings_plugin_helloworld .button:focus,
+#settings_plugin_helloworld .button:hover,
+.button_h_w[disabled] {
+    color: #fff;
+    background-color: #04c;
+    *background-color: #003bb3
+}
+
+.button_h_w.active,
+#settings_plugin_helloworld .button:active {
+    background-color: #039 \9
+}
+
+
+#settings_plugin_helloworld .button:hover {
+    color: #fff;
+    background-color: #04c;
+}
+
+
+#settings_plugin_helloworld .button {
+    -webkit-text-size-adjust: 100%;
+    margin: 0;
+    -webkit-appearance: button;
+    font-weight: normal;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 1px 2px rgba(0, 0, 0, .05);
+    color: #fff;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, .25);
+    background-color: #006dcc;
+    background-image: linear-gradient(to bottom, #08c, #04c);
+    background-repeat: repeat-x;
+    border-color: rgba(0, 0, 0, .1) rgba(0, 0, 0, .1) rgba(0, 0, 0, .25);
+    margin-bottom: 0;
+    margin-left: 5px;
+}
