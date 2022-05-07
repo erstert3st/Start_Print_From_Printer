@@ -14,11 +14,35 @@ from octoprint.filemanager import valid_file_type
 from octoprint.filemanager.destinations import FileDestinations
 from octoprint.filemanager.util import StreamWrapper
 
+__plugin_version__ = "0.0.2"
+__plugin_name__ = "Start_print_from_printer Plugin"
+__plugin_pythoncompat__ = ">=3,<4"  # Only Python 3
+__plugin_description__ = "start gcode Files from octoprint on the printer"
 
-class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
-    octoprint.plugin.AssetPlugin,
-    octoprint.plugin.TemplatePlugin
-):
+
+def __plugin_load__():
+    global __plugin_implementation__
+    global _plugin
+    global __plugin_hooks__
+    global Filemanager
+    global _fileNameDict
+    __plugin_implementation__ = Start_print_from_printerPlugin()
+    __plugin_hooks__ = {
+        "octoprint.comm.protocol.action": __plugin_implementation__.hook_actioncommands,
+        "octoprint.comm.protocol.gcode.received": __plugin_implementation__.hook_sd_list,
+        "octoprint.filemanager.preprocessor": __plugin_implementation__.hook_add_local_file,
+        "octoprint.printer.handle_connect": __plugin_implementation__.hook_connect_pritner,
+        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+    }
+
+
+class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
+                                     octoprint.plugin.StartupPlugin,
+                                     octoprint.plugin.TemplatePlugin,
+                                     octoprint.plugin.SettingsPlugin,
+                                     octoprint.plugin.AssetPlugin,
+                                     octoprint.plugin.SimpleApiPlugin
+                                     ):
 
     def __init__(self):
         self._customFolderNameEdit, self._customFolderName, self._baseFolder, self._fileFolder = "", "", "", "",
@@ -26,17 +50,17 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
 
     def on_after_startup(self):
         global _Filemanager
-        _Filemanager = octoprint.filemanager.storage.LocalFileStorage(
-            self._baseFolder
-        )
         self._baseFolder = self.get_plugin_data_folder()
         self._fileFolder = self._baseFolder + "/readyFiles"
+        _Filemanager = octoprint.filemanager.storage.LocalFileStorage(
+            self.get_plugin_data_folder()
+        )
         if self._settings.get_boolean(["firstUse"]):
             self.make_command_files(writeToSD=True, force=True)
             self.set_settings("firstUse", False)
 
     def get_settings_defaults(self):
-        if hasattr(self, '_settings'):
+        if hasattr(self, '_settings'):  # edit after button
             tempFolderName = self._settings.get(["folder"])
             if self._customFolderName != tempFolderName:
                 self._customFolderName = tempFolderName
@@ -60,23 +84,23 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
     def get_template_configs(self):
         return [
             dict(type="navbar", custom_bindings=False),
-            dict(type="settings", custom_bindings=False)
+            dict(type="settings", custom_bindings=True)
         ]
 
     def on_event(self, event, payload):
         global _Filemanager
-    if event == Events.FILE_REMOVED:  # UpdatedFiles
-        path = self._fileFolder + "/" + payload['name']
-        if _Filemanager.file_exists(path):
-            _Filemanager.remove_file(path)
-        if self._printer.is_sd_ready():
-            self._printer.delete_sd_file(self._customFolderNameEdit[1:] + self.get_valid_file_name(os.path.basename(payload['name'])))
-        else:
-            self.set_settings("modified", True)  # check
-        return
-    if event == Events.FILE_ADDED:  # UpdatedFiles may func with removed + add
-        self.hook_add_local_file(path=payload['path'])
-        return
+        if event == Events.FILE_REMOVED:  # UpdatedFiles
+            path = self._fileFolder + "/" + payload['name']
+            if _Filemanager.file_exists(path):
+                _Filemanager.remove_file(path)
+            if self._printer.is_sd_ready():
+                self._printer.delete_sd_file(self._customFolderNameEdit[1:] + self.get_valid_file_name(os.path.basename(payload['name'])))
+            else:
+                self.set_settings("modified", True)  # check
+            return
+        if event == Events.FILE_ADDED:  # UpdatedFiles may func with removed + add
+            self.hook_add_local_file(path=payload['path'])
+            return
 
     def hook_sd_list(self, comm, line, *args, **kwargs):
         if "End file list" not in line or (comm.isPrinting() and not comm.isSdPrinting()):
@@ -114,21 +138,27 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
         else:
             return
 
+    def refresh_sd_files(self):
+        self.delete_sd_files()
+        self.set_settings("modified", True)
+        Thread(target=self.make_command_files_wait()).start()
+
     def make_command_files_wait(self):  # use there with specific thread
         time.sleep(5)
         self.make_command_files(refreshFolder=True, writeToSD=True)
 
     def make_command_files(self, refreshFolder=False, writeToSD=False, deleteOldFiles=False, fileNameDict=None, force=False):
         global _Filemanager
-        file_obj = StreamWrapper(os.path.basename(self._fileFolder), io.BytesIO(";Generated from pluginName\n".format(**locals()).encode("ascii", "replace")))
-        uploadDone = False
+        print("lol")
         if not fileNameDict:
-            if self._settings.get_boolean(["modified"]) or force:
+            if self._settings.get_boolean(["modified"]) == False or force == True:
                 return
             fileNameDict = self.get_local_files_dict(FileDestinations.LOCAL)
             self.manage_folder(_Filemanager, self._fileFolder, deleteOldFiles)
 
-            # test new file with same name
+        file_obj = StreamWrapper(os.path.basename(self._fileFolder), io.BytesIO(";Generated from pluginName\n".format(**locals()).encode("ascii", "replace")))
+        uploadDone = False
+        # test new file with same name
         for key, files in fileNameDict.items():
             uploadDone = False
             fileName = files['filename']
@@ -172,14 +202,8 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
             Filemanager.add_folder(path)
 
     def set_settings(self, name, value=False):  # bug
-        if(type(value) == bool):
-            self._settings.setBoolean(name, value)
+            self._settings.set_boolean([name], value)
             self._settings.save()
-
-    def refresh_sd_files(self):
-        self.delete_sd_files()
-        self.set_settings("modified", True)
-        Thread(target=self.make_command_files_wait()).start()
 
     def delete_sd_files(self):
         existingSdFiles = list(filter(None, map(lambda x: x['name'] if x['name'].startswith(
@@ -216,26 +240,15 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
 
     def get_api_commands(self):
         return {
-            "make_command_files#": [],
+            "make_command_files": [],
         }
 
     def on_api_command(self, command, data):
         if command == "make_command_files":
             self.make_command_files()
-            parameter = "unset"
-            if "parameter" in data:
-                parameter = "set"
-            self._logger.info("command1 called, parameter is {parameter}".format(**locals()))
-        elif command == "command2":
-            self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
 
     def on_api_get(self, request):
         return flask.jsonify(foo="bar")
-
-    def get_settings_defaults(self):
-        return {
-            # put your plugin's default settings here
-        }
 
     def get_assets(self):
         # Define your plugin's asset files to automatically include in the
@@ -265,9 +278,6 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
                 "pip": "https://github.com/erstert3st/Start_Print_From_Printer/archive/{target_version}.zip",
             }
         }
-
-
-
 
     def commmands(self):
         # Get all FileNames  -> check :D
@@ -309,6 +319,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
         # POINT OF TRUTH :D Done
         # POINT OF TRUTH :D Done
 
+        # check inject vars in config.yaml may set ?
         # js- add variables
         # call function
         # add longname support
@@ -324,25 +335,3 @@ class Start_print_from_printerPlugin(octoprint.plugin.SettingsPlugin,
         # cleanup and check other plugins
 
         return "commands"
-
-  
-__plugin_version__ = "0.0.2"
-__plugin_name__ = "Start_print_from_printer Plugin"
-__plugin_pythoncompat__ = ">=3,<4"  # Only Python 3
-__plugin_description__ = "start gcode Files from octoprint on the printer"
-
-def __plugin_load__():
-    global __plugin_implementation__
-    __plugin_implementation__ = Start_print_from_printerPlugin()
-    global _plugin
-    global __plugin_hooks__
-    global Filemanager
-    global _fileNameDict
-    global __plugin_implementation__
-    __plugin_hooks__ = {
-        "octoprint.comm.protocol.action": __plugin_implementation__.hook_actioncommands,
-        "octoprint.comm.protocol.gcode.received": __plugin_implementation__.hook_sd_list,
-        "octoprint.filemanager.preprocessor": __plugin_implementation__.hook_add_local_file,
-        "octoprint.printer.handle_connect": __plugin_implementation__.hook_connect_pritner,
-        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
-    }

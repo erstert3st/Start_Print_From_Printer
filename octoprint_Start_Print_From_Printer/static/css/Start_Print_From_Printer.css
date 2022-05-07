@@ -1,4 +1,4 @@
-#tab_plugin_helloworld iframe {
+#tab_plugin_Start_Print_From_Printer iframe {
     width: 100%;
     height: 600px;
     border: 1px solid #a80000;
@@ -7,9 +7,9 @@
 
 .button_h_w.active,
 .button_h_w.disabled,
-#settings_plugin_helloworld .button:active,
-#settings_plugin_helloworld .button:focus,
-#settings_plugin_helloworld .button:hover,
+#settings_plugin_Start_Print_From_Printer .button:active,
+#settings_plugin_Start_Print_From_Printer .button:focus,
+#settings_plugin_Start_Print_From_Printer .button:hover,
 .button_h_w[disabled] {
     color: #fff;
     background-color: #04c;
@@ -17,18 +17,18 @@
 }
 
 .button_h_w.active,
-#settings_plugin_helloworld .button:active {
+#settings_plugin_Start_Print_From_Printer .button:active {
     background-color: #039 \9
 }
 
 
-#settings_plugin_helloworld .button:hover {
+#settings_plugin_Start_Print_From_Printer .button:hover {
     color: #fff;
     background-color: #04c;
 }
 
 
-#settings_plugin_helloworld .button {
+#settings_plugin_Start_Print_From_Printer .button {
     -webkit-text-size-adjust: 100%;
     margin: 0;
     -webkit-appearance: button;

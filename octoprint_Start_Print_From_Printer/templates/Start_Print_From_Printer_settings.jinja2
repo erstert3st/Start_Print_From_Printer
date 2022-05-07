@@ -2,13 +2,15 @@
     <div class="control-group">
         <label class="control-label">{{ _('Folder:') }}</label>
         <div class="controls">
-            <input type="text" class="input-block-level" data-bind="value: settings.plugins.helloworld.folder">
+            <input type="text" class="input-block-level"
+                data-bind="value: settings.plugins.Start_Print_From_Printer.folder">
         </div>
     </div>
     <div class="control-group">
         <label class="control-label"></label>
         <div class="controls">
-            <input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.helloworld.autoStart">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.autoStart">
             Refresh at startup
         </div>
     </div>
@@ -16,7 +18,7 @@
         <label class="control-label"></label>
         <div class="controls">
             <input type="checkbox" class="input-block-level"
-                data-bind="checked: settings.plugins.helloworld.commandsClient">
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.commandsClient">
             {{ _('Commands on printer ') }}
         </div>
     </div>
@@ -24,7 +26,7 @@
         <label class="control-label"></label>
         <div class="controls">
             <input type="checkbox" class="input-block-level"
-                data-bind="checked: settings.plugins.helloworld.hideFolder">
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.hideFolder">
             Execlude commands folder on octoprint
         </div>
     </div>
@@ -32,14 +34,19 @@
         <label class="control-label">{{ _('Refresh:') }}</label>
         <div class="controls">
             <input type="checkbox" class="input-block-level"
-                data-bind="checked: settings.plugins.helloworld.refreshHost">
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.refreshHost">
             Server Files
-            <input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.helloworld.refreshSD">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.refreshSD">
             SD Files
             <input type="checkbox" class="input-block-level"
-                data-bind="checked: settings.plugins.helloworld.refreshDeleteOld">
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.refreshDeleteOld">
             Delete Old Files
-            <input type="button" id="findMe" class="button" data-bind="click: forceRefresh" value="Refresh">
+            <input type="checkbox" class="input-block-level"
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.refreshNow">
+            Start Refresh after save!
+            <br>
+            <input type="button" class="button" data-bind="click: forceRefresh" value="Refresh">
 
         </div>
     </div>
