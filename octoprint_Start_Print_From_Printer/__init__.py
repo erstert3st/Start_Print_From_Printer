@@ -6,8 +6,7 @@ from threading import Thread
 
 import flask
 import octoprint.filemanager.storage
-
-# import octoprint.plugin
+import octoprint.plugin
 from octoprint import util as util
 from octoprint.events import Events
 from octoprint.filemanager import valid_file_type
@@ -60,7 +59,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
             self.set_settings("firstUse", False)
 
     def get_settings_defaults(self):
-        if hasattr(self, '_settings'):  # edit after button
+        if hasattr(self, '_settings'):  # edit after button -> only y save and start ?
             tempFolderName = self._settings.get(["folder"])
             if self._customFolderName != tempFolderName:
                 self._customFolderName = tempFolderName
@@ -69,12 +68,6 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                         (tempFolderName[0:6] + "~1").upper() + "/"
                 else:
                     self._customFolderNameEdit = tempFolderName + "/"
-            # bug edit with button
-            if self._settings.get_boolean(["refreshNow"]):
-                self.set_settings("refreshNow", False)
-                self.set_settings("modified", True)
-                self.make_command_files(refreshFolder=self._settings.get_boolean(
-                    ["refreshHost"]), writeToSD=self._settings.get_boolean(["refreshSD"]))
                 # may move done check for init # may make global files
 
         return dict(folder="octoprint",  autoStart=False, commandsClient=False, hideFolder=False, refreshHost=False,
@@ -83,18 +76,17 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
 
     def get_template_configs(self):
         return [
-            dict(type="navbar", custom_bindings=False),
-            dict(type="settings", custom_bindings=True)
+            dict(type="settings",  custom_bindings=False, template="start_print_from_printer_settings.jinja2"),
         ]
 
-    def on_event(self, event, payload):
+    def on_event(self, event, payload):  # if event in ["FileAdded", "FileRemoved"] and payload["storage"] == "local" and "gcode" in payload["type"]:
         global _Filemanager
         if event == Events.FILE_REMOVED:  # UpdatedFiles
             path = self._fileFolder + "/" + payload['name']
             if _Filemanager.file_exists(path):
                 _Filemanager.remove_file(path)
             if self._printer.is_sd_ready():
-                self._printer.delete_sd_file(self._customFolderNameEdit[1:] + self.get_valid_file_name(os.path.basename(payload['name'])))
+                self._printer.delete_sd_file(self._customFolderNameEdit[1:] + self.get_valid_file_name(os.path.basename(payload['name'])))  # Mark
             else:
                 self.set_settings("modified", True)  # check
             return
@@ -108,7 +100,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         if self._settings.get_boolean(["hideFolder"]):
             lengthList = len(comm._sdFiles)
             for key, file in enumerate(reversed(comm._sdFiles)):
-                if(file[0].startswith(self._customFolderNameEdit)):
+                if(file[0].startswith(self._customFolderNameEdit)):  # Mark
                     comm._sdFiles.pop(lengthList - key - 1)
         return line
 
@@ -119,8 +111,9 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         self.make_command_files(writeToSD=True, fileNameDict=filename)
 
     def hook_connect_pritner(self, *args, **kwargs):
-        Thread(target=self.make_command_files_wait()).start()
-        return None
+        # Thread(target=self.make_command_files_wait()).start()  # bug
+        # return None
+        filename = dict()
 
     def hook_actioncommands(self, comm, line, command, *args, **kwargs):
         if command == None:
@@ -151,7 +144,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         global _Filemanager
         print("lol")
         if not fileNameDict:
-            if self._settings.get_boolean(["modified"]) == False or force == True:
+            if self._settings.get_boolean(["modified"]) == False and force == False:
                 return
             fileNameDict = self.get_local_files_dict(FileDestinations.LOCAL)
             self.manage_folder(_Filemanager, self._fileFolder, deleteOldFiles)
@@ -170,14 +163,21 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                 # print('\x1b[6;30;42m' + key + ' wrote' + '\x1b[0m')
             if (writeToSD and self._printer.is_sd_ready()):
                 uploadDone = self.upload_sd_file(filename=fileName, local_path=pathWithFile)
-                time.sleep(1)
+                time.sleep(5)
         if uploadDone:
             self.set_settings("modified", False)
+# self._printer._comm -> CAPABILITY_EXTENDED_M20
 
     def upload_sd_file(self, local_path, filename):
         try:
+            if not self._printer._comm.isOperational() or self._printer._comm.isBusy():
+                return False
             self._printer._create_estimator("stream")
-            remote_path = self._customFolderNameEdit + self.get_valid_file_name(filename)
+            if(False):
+                remote_path = self._customFolderNameEdit + self.get_valid_file_name(filename)  # Mark
+            else:
+                filenameStart, ext = os.path.splitext(filename)
+                remote_path = self._customFolderNameEdit + filenameStart + '.gco'  # Mark
             self._printer._comm.startFileTransfer(
                 path=local_path,
                 localFilename=filename,
@@ -202,12 +202,12 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
             Filemanager.add_folder(path)
 
     def set_settings(self, name, value=False):  # bug
-            self._settings.set_boolean([name], value)
-            self._settings.save()
+        self._settings.set_boolean([name], value)
+        self._settings.save()
 
     def delete_sd_files(self):
         existingSdFiles = list(filter(None, map(lambda x: x['name'] if x['name'].startswith(
-            self._customFolderNameEdit[1:]) else '', self._printer.get_sd_files())))
+            self._customFolderNameEdit[1:]) else '', self._printer.get_sd_files())))  # Mark
         for filename in existingSdFiles:
             self._printer.delete_sd_file(filename)
 
@@ -245,7 +245,14 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
 
     def on_api_command(self, command, data):
         if command == "make_command_files":
-            self.make_command_files()
+            self.set_settings("modified", True)
+            Thread(target=self.make_command_files, args=(eval(data['refreshFolder']),
+                                                         eval(data['writeToSD']), eval(data['deleteOldFiles']), None, eval(data['force']))).start()
+           # self.make_command_files(
+            #   refreshFolder=data['refreshFolder'],
+            #    writeToSD=data['writeToSD'],
+            #    deleteOldFiles=data['deleteOldFiles'],
+            #   force=data['force'])
 
     def on_api_get(self, request):
         return flask.jsonify(foo="bar")
@@ -316,19 +323,21 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         # start everything at printer connect
         # thing about run once
         # remve setting Int
-        # POINT OF TRUTH :D Done
-        # POINT OF TRUTH :D Done
+        # call js function
 
-        # check inject vars in config.yaml may set ?
-        # js- add variables
-        # call function
+        # new plugins with all setting and github
+        # refresh button
+        # POINT OF TRUTH :D Done
+        # POINT OF TRUTH :D Done
+        # set html right
         # add longname support
+        # check inject vars in config.yaml may set ?
+        # js- get value of checkboxes
+        # add longname support + test all of it and add abfrage
         # checkVarName
         # show foldernameEdit in Settings
         # CSS -.-
         # fix Straiming bug
-        # refresh button
-        # new plugins with all setting and github
         # get good plugin name !!!!
         # show if octo is not connected -> may not possible
         # bugfrei
