@@ -29,8 +29,7 @@ $(function () {
                 "writeToSD": "True",
                 "deleteOldFiles": "True",
                 "force": "True"
-            })
-                .done(function (response) {
+            }).done(function (response) {
                     if (!response) {
                         showConfirmationDialog(
                             _.sprintf(
