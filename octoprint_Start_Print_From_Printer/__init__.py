@@ -25,14 +25,16 @@ def __plugin_load__():
     global __plugin_hooks__
     global Filemanager
     global _fileNameDict
+    global _counter
+    global _longWriteSuppoort
+    _counter = 1
+    _longWriteSuppoort = False
     __plugin_implementation__ = Start_print_from_printerPlugin()
-    __plugin_hooks__ = {
-        "octoprint.comm.protocol.action": __plugin_implementation__.hook_actioncommands,
-        "octoprint.comm.protocol.gcode.received": __plugin_implementation__.hook_sd_list,
-        "octoprint.filemanager.preprocessor": __plugin_implementation__.hook_add_local_file,
-        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
-        # ,"octoprint.comm.protocol.scripts": __plugin_implementation__.hook_connect_printer
-    }
+    __plugin_hooks__ = {"octoprint.comm.protocol.action": __plugin_implementation__.hook_actioncommands,
+                        "octoprint.comm.protocol.gcode.received": __plugin_implementation__.hook_sd_list,
+                        "octoprint.filemanager.preprocessor": __plugin_implementation__.hook_add_local_file,
+                        "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
+                        "octoprint.comm.protocol.scripts": __plugin_implementation__.hook_connect_printer}
 
 
 class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
@@ -45,8 +47,6 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
 
     def __init__(self):
         self._customFolderNameEdit, self._customFolderName, self._baseFolder, self._fileFolder = "", "", "", "",
-        self._counter = 1
-        self._longFilenameSupport = False
 
     def on_after_startup(self):
         global _Filemanager
@@ -113,12 +113,21 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
     def hook_connect_printer(self, comm, script_type, script_name, *args, **kwargs):
         if not script_type == "gcode" or not script_name == "afterPrinterConnected":
             return None
-  # bug LFN_WRITE LFN_WRITE
-        if self._settings.get_boolean(["modified"]):
-            variables = dict(myvariable=" Start transfare new Files")
-            # Thread(target=self.make_command_files_wait()).start()
-            return None, None, variables
+        Thread(target=self.waitToCheckVars).start()
         return None
+
+    def waitToCheckVars(self):
+        global _longWriteSuppoort
+        time.sleep(10)
+        if 'LFN_WRITE' in self._printer._comm._firmware_capabilities:
+            _longWriteSuppoort = self._printer._comm._firmware_capabilities['LFN_WRITE']
+        if self._settings.get_boolean(["modified"]):
+            self.make_command_files(
+                refreshFolder=self._settings.get_boolean(["refreshFolder"]),
+                writeToSD=self._settings.get_boolean(["writeToSD"]),
+                deleteOldFiles=self._settings.get_boolean(["refreshDeleteOld"]),
+                force=self._settings.get_boolean(["force"]),
+                sdListCompare=True)
 
     def hook_firmware_check(self, comm, cap, enabled, already_defined, *args, **kwargs):
         global _longFilenameSupport
@@ -144,34 +153,37 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
     def refresh_sd_files(self):
         self.delete_sd_files()
         self.set_settings("modified", True)
-        Thread(target=self.make_command_files_wait()).start()
+        Thread(target=self.make_command_files_wait).start()
 
     def refresh_sd_data(self):
-        if self._printer.is_ready():
-            self._printer.commands(["M503"])
+        sdFileList = list(filter(None, map(lambda x: self._printer._comm._sdFilesMap.get(x[0]) if self._printer._comm._sdFilesMap.get(
+            x[0]).startswith(self._customFolderName + '/') else '', self._printer._comm._sdFiles)))
+        # sdFileList = self._printer.get_sd_files(refresh=True)  # test without bool may to longg
+        # sdFileList = list(filter(None, map(lambda x: x['display'][len(self._customFolderName) + 1:]
+        #                 if x['display'].startswith(self._customFolderName + '/') else '', sdFileList)))
+        return sdFileList
 
     def make_command_files_wait(self):  # use there with specific thread
         time.sleep(10)
         self.make_command_files(refreshFolder=True, writeToSD=True)
 
-    def make_command_files(self, refreshFolder=False, writeToSD=False, deleteOldFiles=False, fileNameDict=None, force=False):
+    def make_command_files(self, refreshFolder=False, writeToSD=False, deleteOldFiles=False,  force=False, sdListCompare=False, fileNameDict=None):
         global _Filemanager
         print("lol")
+        sdCommandFolder = list()
         if not fileNameDict:
             if self._settings.get_boolean(["modified"]) == False and force == False:
                 return
             fileNameDict = self.get_local_files_dict(FileDestinations.LOCAL)
             self.manage_folder(_Filemanager, self._fileFolder, deleteOldFiles)
 
+            if not deleteOldFiles and sdListCompare and self._printer.is_sd_ready():
+                sdCommandFolder = self.refresh_sd_data()
+
         file_obj = StreamWrapper(os.path.basename(self._fileFolder), io.BytesIO(";Generated from pluginName\n".format(**locals()).encode("ascii", "replace")))
         uploadDone = False
         # test new file with same name
-        sdCommandFolder = list()
-        if not deleteOldFiles and self._printer.is_sd_ready():
-            self.refresh_sd_data()
-            time.sleep(5)
-            sdCommandFolder = list(filter(None, map(lambda x: x[1 + len(self._customFolderName):]
-                                                    if x.startswith(self._customFolderName + '/') else '', list(self._printer._comm._sdFilesMap.values()))))
+
         for key, files in fileNameDict.items():
             uploadDone = False
             fileName = files['filename']
@@ -181,24 +193,25 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                 with open(pathWithFile, "w") as file:
                     file.write("M118 A1 action:startPrintFromOctoPrint " + files['args'])
                 # print('\x1b[6;30;42m' + key + ' wrote' + '\x1b[0m')
-            if (writeToSD and self._printer.is_sd_ready()):
-                uploadDone = self.upload_sd_file(filename=fileName, local_path=pathWithFile, force=force)
-                time.sleep(5)
+                if (writeToSD and self._printer.is_sd_ready()):
+                    uploadDone = self.upload_sd_file(filename=fileName, local_path=pathWithFile, force=force,
+                                                     sdCommandFolder=sdCommandFolder, sdListCompare=sdListCompare)
+                    time.sleep(1)
         if uploadDone:
             self.set_settings("modified", False)
 # self._printer._comm -> CAPABILITY_EXTENDED_M20
 
-    def upload_sd_file(self, local_path, filename, force, sdCommandFolder=list()):
+    def upload_sd_file(self, local_path, filename, force, sdCommandFolder=list(), sdListCompare=False):
         try:
             if not self._printer._comm.isOperational() or self._printer._comm.isBusy():
                 return False
-            self._printer._create_estimator("stream")
-            if self._printer._comm._firmware_capabilities['LFN_WRITE']:
+           # self._printer._create_estimator("stream")
+            if _longWriteSuppoort:  # global var
                 filenameStart, ext = os.path.splitext(filename)
                 shortFilename = filenameStart + '.gco'
             else:
                 shortFilename = self.get_valid_file_name(filename)
-            if not force and shortFilename in sdCommandFolder:
+            if sdListCompare and shortFilename in sdCommandFolder:
                 return True
             self._printer._comm.startFileTransfer(
                 path=local_path,
@@ -256,10 +269,10 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         return _fileNameDict
 
     def add_to_dict(self, node):
-        global _fileNameDict
-        strCounter = str(self._counter)  # test without var
+        global _fileNameDict, _counter
+        strCounter = str(_counter)  # test without var
         _fileNameDict['file' + strCounter] = {'filename': node['name'], 'args': "'" + node['path'] + "'", 'icon': 'shouldbeimplemented'}
-        self._counter += 1
+        _counter += 1
 
     def get_api_commands(self):
         return {
@@ -271,11 +284,15 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
             self.set_settings("modified", True)
             if self._settings.get_boolean(["refreshDeleteOld"]):
                 self.refresh_sd_files()
-            Thread(target=self.make_command_files, args=(self._settings.get_boolean(["refreshFolder"]),
-                                                         self._settings.get_boolean(["writeToSD"]),
-                                                         self._settings.get_boolean(["refreshDeleteOld"]),  None,
-                                                         self._settings.get_boolean(["force"]))).start()
-           # self.make_command_files(
+                return
+            Thread(target=self.make_command_files, args=(True, True, self._settings.get_boolean(
+                ["refreshDeleteOld"]),   self._settings.get_boolean(["force"]), True, None)).start()
+
+            # Thread(target=self.make_command_files, args=(self._settings.get_boolean(["refreshFolder"]),
+            #                                              self._settings.get_boolean(["writeToSD"]),
+            #                                              self._settings.get_boolean(["refreshDeleteOld"]),  None,
+            #                                              self._settings.get_boolean(["force"]))).start()
+   # self.make_command_files(
             #   refreshFolder=data['refreshFolder'],
             #    writeToSD=data['writeToSD'],
             #    deleteOldFiles=data['deleteOldFiles'],
@@ -366,6 +383,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         # checkVarName
         # fix Straiming bug
         # bugfrei
+        # bug in yamls vars
         # cleanup and check other plugins
         summy = "brauchst vil nd"
         # check inject vars in config.yaml may set ?
