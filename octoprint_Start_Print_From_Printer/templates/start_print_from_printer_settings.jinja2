@@ -44,12 +44,24 @@
             <div class="row-fluid" data-bind="allowBindings: true">
                 <div class="control-group">
                     <div class="controls">
-                        <button class="button1 btn btn-primary"
-                            data-bind="click: forceRefresh">Refresh
+                        <button class="button1 btn btn-primary" data-bind="click: forceRefresh">Refresh
                             now</button>
                     </div>
                 </div>
             </div>
+        </div>
+        <label class="control-label"></label>
+        <div class="controls">
+            <br>
+            <br>
+            <input type="checkbox" class="hideinput input-block-level" 
+                data-bind="checked: settings.plugins.Start_Print_From_Printer.longWriteSuppoort">
+            longWriteSuppoort
+            <br> 
+            disabled="false"
+            <span>
+                only for develop
+            </span>
         </div>
     </div>
 </form>
