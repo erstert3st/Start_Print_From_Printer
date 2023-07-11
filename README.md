@@ -9,9 +9,8 @@ Before using the script, please follow the steps below:
 1. After installing the script, create a folder named "Folder_name" on your SD card. The name of the folder can be configured in the settings.
 
 ## TODO
-
+- remove global vars
 - Make a release version 
-- Clean up variable names
 - Test the script with other printers (currently only tested on Ender3 with custom firmware).
 - Create a GitHub build workflow for automated builds.
 
