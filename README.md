@@ -12,4 +12,4 @@ Folder_name can be set in settings
 Make Release
 Cleanup var names
 test with other printer (only tested on Ender3 with custom firmware)
-
+Make github build
