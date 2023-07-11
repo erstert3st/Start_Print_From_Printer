@@ -20,8 +20,6 @@ Feel free to contribute to this project by submitting pull requests or reporting
 
 ## Configuration
 
-To configure the script, you can modify the following settings:
-
 - `Folder_name`: The name of the folder where the print files are stored on the SD card. Change this according to your preference.
 
 
