@@ -1,17 +1,15 @@
 # Start_Print_From_Printer
 
-**TODO:** Describe what your plugin does.
+ start prints saved on octoprint direct on printer 
 
-## Setup
+## Only works with firmware with LONG_WRITE_SUPPORT!
 
-Install via the bundled [Plugin Manager](https://docs.octoprint.org/en/master/bundledplugins/pluginmanager.html)
-or manually using this URL:
+install- after that make Foldername on sd Card
+Folder_name can be set in settings
 
-    https://github.com/erstert3st/Start_Print_From_Printer/archive/master.zip
 
-**TODO:** Describe how to install your plugin, if more needs to be done than just installing it via pip or through
-the plugin manager.
+**TODO:** 
+Make Release
+Cleanup var names
+test with other printer (only tested on Ender3 with custom firmware)
 
-## Configuration
-
-**TODO:** Describe your plugin's configuration options (if any).
