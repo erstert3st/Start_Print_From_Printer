@@ -117,6 +117,54 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         Thread(target=self.waitToCheckVars).start()
         return None
 
+    def hook_actioncommands(self, comm, line, command, *args, **kwargs):
+        if command == None:
+            return
+        elif kwargs['name'] == 'startPrintFromOctoPrint':
+            if kwargs['params'][0] == "'":
+                if self._printer.is_ready():
+                    self._printer.unselect_file()
+                    try:
+                        self._printer.select_file(path=kwargs['params'].replace("'", ""), sd=False, printAfterSelect=True)
+                    except:
+                        self.refresh_sd_files()
+            elif kwargs['params'] == "refresh":
+                self.refresh_sd_files()
+        else:
+            return
+
+    def make_command_files_wait(self, time=10):
+        time.sleep(time)
+        self.make_command_files(refreshFolder=True, writeToSD=True)
+
+    def make_command_files(self, refreshFolder=False, writeToSD=False, deleteOldFiles=False,  force=False, sdListCompare=False, fileNameDict=None):  # fix args
+        global _Filemanager
+        sdCommandFolder = list()
+        if not fileNameDict:
+            if self._settings.get_boolean(["modified"]) == False and force == False:
+                return
+            fileNameDict = self.get_local_files_dict(FileDestinations.LOCAL)
+            self.manage_folder(_Filemanager, self._fileFolder, deleteOldFiles)
+
+            if not deleteOldFiles and sdListCompare and self._printer.is_sd_ready():
+                sdCommandFolder = self.refresh_sd_data() # bug 
+
+        file_obj = StreamWrapper(os.path.basename(self._fileFolder), io.BytesIO(";Generated from pluginName\n".format(**locals()).encode("ascii", "replace")))
+        uploadDone = False
+        for key, files in fileNameDict.items():
+            uploadDone = False
+            fileName = files['filename']
+            pathWithFile = self._fileFolder + "/" + fileName
+            if not _Filemanager.file_exists(pathWithFile) or refreshFolder or deleteOldFiles:
+                _Filemanager.add_file(path=pathWithFile, file_object=file_obj, allow_overwrite=True)
+                with open(pathWithFile, "w") as file:
+                    file.write("M118 A1 action:startPrintFromOctoPrint " + files['args'])
+                if (writeToSD and self._printer.is_sd_ready()):
+                    uploadDone = self.upload_sd_file(filename=fileName, local_path=pathWithFile, force=force,
+                                                     sdCommandFolder=sdCommandFolder, sdListCompare=sdListCompare)
+        if uploadDone:
+            self.set_settings("modified", False)
+        self._printer.unselect_file()
     def waitToCheckVars(self):
         global _longWriteSuppoort
         counter = 0
@@ -140,21 +188,6 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         #         force=self._settings.get_boolean(["force"]),
         #         sdListCompare=True)
 
-    def hook_actioncommands(self, comm, line, command, *args, **kwargs):
-        if command == None:
-            return
-        elif kwargs['name'] == 'startPrintFromOctoPrint':
-            if kwargs['params'][0] == "'":
-                if self._printer.is_ready():
-                    self._printer.unselect_file()
-                    try:
-                        self._printer.select_file(path=kwargs['params'].replace("'", ""), sd=False, printAfterSelect=True)
-                    except:
-                        self.refresh_sd_files()
-            elif kwargs['params'] == "refresh":
-                self.refresh_sd_files()
-        else:
-            return
 
     def refresh_sd_files(self):
         self.delete_sd_files()
@@ -171,38 +204,6 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
             sdFileList = self.get_sd_files(True)
         return sdFileList
 
-    def make_command_files_wait(self, time=10):
-        time.sleep(time)
-        self.make_command_files(refreshFolder=True, writeToSD=True)
-
-    def make_command_files(self, refreshFolder=False, writeToSD=False, deleteOldFiles=False,  force=False, sdListCompare=False, fileNameDict=None):  # fix args
-        global _Filemanager
-        sdCommandFolder = list()
-        if not fileNameDict:
-            if self._settings.get_boolean(["modified"]) == False and force == False:
-                return
-            fileNameDict = self.get_local_files_dict(FileDestinations.LOCAL)
-            self.manage_folder(_Filemanager, self._fileFolder, deleteOldFiles)
-
-            if not deleteOldFiles and sdListCompare and self._printer.is_sd_ready():
-                sdCommandFolder = self.refresh_sd_data()
-
-        file_obj = StreamWrapper(os.path.basename(self._fileFolder), io.BytesIO(";Generated from pluginName\n".format(**locals()).encode("ascii", "replace")))
-        uploadDone = False
-        for key, files in fileNameDict.items():
-            uploadDone = False
-            fileName = files['filename']
-            pathWithFile = self._fileFolder + "/" + fileName
-            if not _Filemanager.file_exists(pathWithFile) or refreshFolder:
-                _Filemanager.add_file(path=pathWithFile, file_object=file_obj, allow_overwrite=True)
-                with open(pathWithFile, "w") as file:
-                    file.write("M118 A1 action:startPrintFromOctoPrint " + files['args'])
-                if (writeToSD and self._printer.is_sd_ready()):
-                    uploadDone = self.upload_sd_file(filename=fileName, local_path=pathWithFile, force=force,
-                                                     sdCommandFolder=sdCommandFolder, sdListCompare=sdListCompare)
-        if uploadDone:
-            self.set_settings("modified", False)
-        self._printer.unselect_file()
 
     def upload_sd_file(self, local_path, filename, force, sdCommandFolder=list(), sdListCompare=False):
             if not self._printer._comm.isOperational() or self._printer._comm.isBusy():
@@ -343,67 +344,3 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                 "pip": "https://github.com/erstert3st/Start_Print_From_Printer/archive/{target_version}.zip",
             }
         }
-
-    def commmands(self):
-        # Get all FileNames  -> check :D
-        # Map and add Command -> on thinging stage -> duple [name, printCommand,May Icons] -> check :D
-        # *cleanUp
-        # make local Files -> check:
-        # git commit -> zwischencheck
-        # write to File -> check c:
-        # make own Gcommands -> donne
-        # get all with Foldercrap -.- check origin codde
-        # Bad Info aufbohren for list Files Funcion -> FUUUUUUUUUUUUUUUUUUUUUUUUUUUCK DONE
-        # make file with own Gcode -> add to File  -> done
-        # let octoPrint print files -> done
-        # add refresh for bugs
-        # folder FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUuCK
-        # Send Map
-        # option: refreshonClient add config    Folder
-        # Manipulate list files + _add_files
-        # rename delete -> read more other plugins!
-        # uploud -> read more other plugins!
-        # delete
-        #  Hook into:  OR ONLY FOR BOOT Or Only by update Command ?
-        # check last modified so dont update every boot -> Fuck you
-        # **Revision implemented as modified
-        # _add_sd_file find soluten
-        # implement trigger       def add_sd_file( self, filename, path, on_success=None, on_failure=None, *args, **kwargs):
-        # | Sends a custom "// action:<action> <parameters>"
-        # | Sends a custom "// action:<action> <parameters>"
-        # Bug in folder rename
-        # Bug renaime in ready Folder ?!
-        # check or learn about trigger
-        # check self.vars
-        # check de global vars
-        # thing about boot
-        # POINT OF TRUTH :D Done
-        # start everything at printer connect
-        # thing about run once
-        # remve setting Int
-        # call js function
-        # add longname support  and add abfrage
-        # new plugins with all setting and github
-        # refresh button rething
-        # CSS -.-
-        # js- get value of checkboxes
-        # set html right
-        # check if sd file exist
-        # fix printer connect -> may look on wwprom Editor
-        # fix Straiming bug -> i thing done ?
-        # POINT OF TRUTH :D Done
-        # POINT OF TRUTH :D Done
-        # remove global var force
-
-        # bugfrei
-        # bug in yamls vars
-        # cleanup
-        # fix args for html
-        # test with no cfw
-        summy = "brauchst vil nd"
-        # check inject vars in config.yaml may set ?
-        # show foldernameEdit in Settings
-        dummy = "May not possible"
-        # show if octo is not connected -> may not possible
-        # get good plugin name !!!!
-        return "commands"

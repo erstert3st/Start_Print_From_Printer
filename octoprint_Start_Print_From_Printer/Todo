@@ -1,0 +1,65 @@
+   # Get all FileNames  -> check :D
+        # Map and add Command -> on thinging stage -> duple [name, printCommand,May Icons] -> check :D
+        # *cleanUp
+        # make local Files -> check:
+        # git commit -> zwischencheck
+        # write to File -> check c:
+        # make own Gcommands -> donne
+        # get all with Foldercrap -.- check origin codde
+        # Bad Info aufbohren for list Files Funcion -> FUUUUUUUUUUUUUUUUUUUUUUUUUUUCK DONE
+        # make file with own Gcode -> add to File  -> done
+        # let octoPrint print files -> done
+        # add refresh for bugs
+        # folder FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUuCK
+        # Send Map
+        # option: refreshonClient add config    Folder
+        # Manipulate list files + _add_files
+        # rename delete -> read more other plugins!
+        # uploud -> read more other plugins!
+        # delete
+        #  Hook into:  OR ONLY FOR BOOT Or Only by update Command ?
+        # check last modified so dont update every boot -> Fuck you
+        # **Revision implemented as modified
+        # _add_sd_file find soluten
+        # implement trigger       def add_sd_file( self, filename, path, on_success=None, on_failure=None, *args, **kwargs):
+        # | Sends a custom "// action:<action> <parameters>"
+        # | Sends a custom "// action:<action> <parameters>"
+        # Bug in folder rename
+        # Bug renaime in ready Folder ?!
+        # check or learn about trigger
+        # check self.vars
+        # check de global vars
+        # thing about boot
+        # POINT OF TRUTH :D Done
+        # start everything at printer connect
+        # thing about run once
+        # remve setting Int
+        # call js function
+        # add longname support  and add abfrage
+        # new plugins with all setting and github
+        # refresh button rething
+        # CSS -.-
+        # js- get value of checkboxes
+        # set html right
+        # check if sd file exist
+        # fix printer connect -> may look on wwprom Editor
+        # fix Straiming bug -> i thing done ?
+        # POINT OF TRUTH :D Done
+        # POINT OF TRUTH :D Done
+        # remove global var force
+
+        # bugfrei
+        # bug in yamls vars
+        # cleanup
+        # fix args for html
+        # test with no cfw
+        summy = "brauchst vil nd"
+        # check inject vars in config.yaml may set ?
+        # show foldernameEdit in Settings
+        dummy = "May not possible"
+        # show if octo is not connected -> may not possible
+        # get good plugin name !!!!
+        start: 
+        python setup.py develop
+        octoprint serve
+        maybe: ln -s  ~/Dokumente/new/Start_Print_From_Printer/ .
