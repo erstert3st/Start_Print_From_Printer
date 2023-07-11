@@ -9,7 +9,7 @@ Folder_name can be set in the settings
 
 
 ##TODO:
-Make Release
-Cleanup var names
-test with other printers (only tested on Ender3 with custom firmware)
-Make github build
+ Make Release
+ Cleanup var names
+ test with other printers (only tested on Ender3 with custom firmware)
+ Make github build
