@@ -1,6 +1,7 @@
 # Start_Print_From_Printer
 
 This repository contains a script that allows you to start prints saved on OctoPrint directly from your printer.
+
 This project was created to help me learn Python, and I'm aware that there are several lines that could be written in a cleaner and more efficient way. Btw it was written before ChatGPT.
 
 Before using the script, please follow the steps below:
