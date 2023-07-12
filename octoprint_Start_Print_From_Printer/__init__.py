@@ -49,7 +49,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
         self._custom_folder_name_edit, self._custom_folder_name, self._baseFolder, self._file_folder = "", "", "", "",
 
     def on_after_startup(self):
-       # print("huiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
+        print("huiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii2")
         global _Filemanager
         self._baseFolder = self.get_plugin_data_folder()
         self._file_folder = self._baseFolder + "/readyFiles"
@@ -162,10 +162,11 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                     file.write("M118 A1 action:startPrintFromOctoPrint " + files['args'])
                 if (write_to_sd and self._printer.is_sd_ready()):
                     upload_done = self.upload_sd_file(file_name=file_name, local_path=path_with_file, force=force,
-                                                     sd_command_folder=sd_command_folder, sd_list_compare=sd_list_compare)
+                                                      sd_command_folder=sd_command_folder, sd_list_compare=sd_list_compare)
         if upload_done:
             self.set_settings("modified", False)
-        self._printer.unselect_file()
+        if self._printer._selectedFile is not None:
+            self._printer.unselect_file()
 
     def wait_to_check_vars(self):
         global _long_write_support
@@ -180,7 +181,7 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
                 break
             time.sleep(1)
             counter += 1
-        _long_write_support = False
+       # _long_write_support = False
         self.set_settings("long_write_support", _long_write_support)
         # if self._settings.get_boolean(["modified"]): # test
         #     self.make_command_files(
@@ -219,9 +220,9 @@ class Start_print_from_printerPlugin(octoprint.plugin.EventHandlerPlugin,
             return True
         self._printer._comm.startFileTransfer(
             path=local_path,
-            local_file_name=file_name,
-            remote_file_name=self._custom_folder_name_edit + short_file_name,
-            special=not valid_file_type(file_name=file_name, type="gcode"))
+            localFilename=file_name,
+            remoteFilename=self._custom_folder_name_edit + short_file_name,
+            special=not valid_file_type(filename=file_name, type="gcode"))
         time.sleep(4)
 
         return True
